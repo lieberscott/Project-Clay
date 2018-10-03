@@ -1,42 +1,35 @@
-// client-side js
-// run by the browser each time your view template is loaded
+const update = document.getElementById("update");
 
-console.log('hello world :o');
+const sectionsArr = [];
 
-// our default array of dreams
-const dreams = [
-  'Find and count some sheep',
-  'Climb a really tall mountain',
-  'Wash the dishes'
-];
+// will get innerHTML of each section and add it to sectionsArr
+let sectionsText = "";
 
-// define variables that reference elements on our page
-const dreamsList = document.getElementById('dreams');
-const dreamsForm = document.forms[0];
-const dreamInput = dreamsForm.elements['dream'];
+// listen for update button click
+update.onclick = (e) => {
+  e.preventDefault();
+  
+  // putting this inside click event (rather than on page load) in case user adds a new section
+  const sections = document.querySelectorAll(".section");
+  
+  // create an array of each section's text
+  for (let i = 1; i < sections.length; i++) {
+    sectionsText = document.getElementById("section" + i).innerHTML;
+    sectionsArr.push(sectionsText);
+  }
+  
+  // send data to backend
+  /*
+  $.ajax({
+      url: "/newpoll",
+      type: "post",
+      data: $("#newpoll").serialize(),
+      success: (res) => {
+        if (res.result == "redirect") {
+          window.location.replace(res.url);
+        }
+      }
+    }); */
 
-// a helper function that creates a list item for a given dream
-const appendNewDream = function(dream) {
-  const newListItem = document.createElement('li');
-  newListItem.innerHTML = dream;
-  dreamsList.appendChild(newListItem);
-}
-
-// iterate through every dream and add it to our page
-dreams.forEach( function(dream) {
-  appendNewDream(dream);
-});
-
-// listen for the form to be submitted and add a new dream when it is
-dreamsForm.onsubmit = function(event) {
-  // stop our form submission from refreshing the page
-  event.preventDefault();
-
-  // get dream value and add it to the list
-  dreams.push(dreamInput.value);
-  appendNewDream(dreamInput.value);
-
-  // reset form 
-  dreamInput.value = '';
-  dreamInput.focus();
+  console.log("update clicked");
 };

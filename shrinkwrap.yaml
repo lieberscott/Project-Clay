@@ -1,5 +1,6 @@
 dependencies:
   express: 4.16.3
+  jquery: 3.3.1
   nodegit: 0.22.2
   pug: 2.0.3
 packages:
@@ -726,6 +727,10 @@ packages:
     dev: false
     resolution:
       integrity: sha1-R+Y/evVa+m+S4VAOaQ64uFKcCZo=
+  /jquery/3.3.1:
+    dev: false
+    resolution:
+      integrity: sha512-Ubldcmxp5np52/ENotGxlLe6aGMvmF4R8S6tZjsP6Knsaxd/xp3Zrh50cG93lR6nPXyUFwzN3ZSOQI0wRJNdGg==
   /js-stringify/1.0.2:
     dev: false
     resolution:
@@ -1620,5 +1625,6 @@ shrinkwrapMinorVersion: 9
 shrinkwrapVersion: 3
 specifiers:
   express: ^4.16.3
+  jquery: ^3.3.1
   nodegit: ^0.22.2
   pug: ^2.0.3
