@@ -10,6 +10,10 @@ body {
   margin: 2em;
 }
 
+div {
+  max-width: 300px;
+}
+
 h1 {
   font-style: italic;
   color: #373fff;

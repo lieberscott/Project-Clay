@@ -50,20 +50,15 @@ const signature = nodegit.Signature.now("Author", "Commiter");
 
 let repo, index, oid, remote;
 
-let sectionsArr = [];
-
 // const SSH = process.env.SSH;
 
 // http://expressjs.com/en/starter/static-files.html
 app.use(express.static("public"));
 app.set('view engine', 'pug');
 
-// http://expressjs.com/en/starter/basic-routing.html
-// app.get('/', (req, res) => {
-//   res.render(process.cwd() + "/views/index.pug");
-// });
-
 app.get('/', (req, res) => {
+  
+  let sectionsArr = [];
   
   fs.readdir(newLocalDir, (err, files) => {
     console.log("zeroth checkpoint");
@@ -75,21 +70,37 @@ app.get('/', (req, res) => {
         console.log("first checkpoint : ", file);
         let x = fs.readFileSync("./nodegit-tmp/" + file, 'utf8');
         console.log(x);
-        sectionsArr[index] = x;
+        sectionsArr.push(x);
       }
     });
+    console.log("sectionsArr : ", sectionsArr);
   });
   
   sectionsArr.forEach(item => {
     console.log(item)
   });
   
+  
   res.render(process.cwd() + "/views/index.pug", { sectionsArr });
 });
 
 app.get('/nodegit', (req, res) => {
+
+  let sectionsArr = req.body.data;
   
-  nodegit.Repository.open(localDir)
+  // get every local file name in an array so it can be overwritten and then pushed to Github remote
+  let filesArr = fs.readdir(newLocalDir, (err, files) => {
+    files.forEach((file) => {
+      console.log(file);
+    });
+  });
+  
+  // overwrite every file with section text (even those that are unchanged, this can probably be optimized better)
+  filesArr.forEach((file, index) => {
+    fs.writeFileSync(file, sectionsArr[index]);
+  });
+  
+  nodegit.Repository.open(newLocalDir)
     .then((repository) => {
       repo = repository;
       return;
@@ -97,7 +108,7 @@ app.get('/nodegit', (req, res) => {
     .then(() => repo.refreshIndex()) // Refresh the directory (not totally sure what that means!!)
     .then((oid) => {
       // ([array of files to commit], author, commiter, message)
-      return repo.createCommitOnHead(["newFile.txt", "newFile2.txt"], signature, signature, "new commit with two files");
+      return repo.createCommitOnHead(filesArr, signature, signature, "updated by website");
     })
     .then((oidNum) => {
       oid = oidNum; // unused, but may need it for other operations later on
