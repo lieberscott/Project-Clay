@@ -13,23 +13,23 @@ update.onclick = (e) => {
   const sections = document.querySelectorAll(".section");
   
   // create an array of each section's text
-  for (let i = 1; i < sections.length; i++) {
+  for (let i = 0; i < sections.length; i++) {
     sectionsText = document.getElementById("section" + i).innerHTML;
     sectionsArr.push(sectionsText);
   }
-  
+  console.log(sectionsArr);
   // send data to backend
-  /*
+  
   $.ajax({
-      url: "/newpoll",
-      type: "post",
-      data: $("#newpoll").serialize(),
-      success: (res) => {
-        if (res.result == "redirect") {
-          window.location.replace(res.url);
-        }
+    url: "/nodegit",
+    type: "get",
+    data: { sectionsArr },
+    success: (res) => {
+      if (res.result == "nodegit") {
+        console.log("it updated!");
       }
-    }); */
+    }
+  });
 
   console.log("update clicked");
 };
