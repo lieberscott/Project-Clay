@@ -1,4 +1,5 @@
 const update = document.getElementById("update");
+const history = document.getElementById("history");
 
 const sectionsArr = [];
 
@@ -33,3 +34,13 @@ update.onclick = (e) => {
 
   console.log("update clicked");
 };
+
+const getHTML = () => {
+ 
+  
+  
+}
+$(".line").each((div, index) => {
+  console.log(div);
+  console.log(index);
+});

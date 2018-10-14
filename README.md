@@ -5,10 +5,10 @@
 * {app}/ populates the page with the text from each file in the LOCAL nodegit-tmp folder
 * clicking the /nodegit button grabs the text from each textbox, puts it in an array sectionsArr, sends an ajax req to {app}/nodegit, the server receives the info at {app}/nodegit, overwrites the files locally, then pushes the changes to the remote Github repo
 * still need to go to {app}/update to pull the latest changes from remote Github repo (i.e., if someone else pushes new changes, you need to go to {app}/update to receive those changes locally)
-* Next steps: Have {app}/ automatically pull latest changes (i.e., integrate functionality from {app}/update)
+* Next steps: Have {app}/ automatically pull latest changes (i.e., integrate functionality from {app}/update to {app}/)
 * Next steps: Institute git compare newest changes to latest version (have a page where you can gitcompare the changes you make before committing them to the Github repo officially)
 * Next steps: Be able to pull all past commits to compare current version to any past version
-* 
+* Next steps: Allow user to add custom commit message that explains changes
 * 
 * 
 * 
