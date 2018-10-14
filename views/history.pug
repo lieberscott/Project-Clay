@@ -12,12 +12,18 @@ html(lang="en")
     
     
   body
-    h1 An Act relative to Health Care Quality, Cost Control, and Transparency
-    p You can click inside the boxes to edit the text. Clicking "/nodegit" will permanently save the changes
-    each val, ind in sectionsArr
-      div.section(id="section" + ind contenteditable="true")= val
+    h1 History of changes
+    div View previous changes
+    br
+    each val, ind in histArr
+      div.history
+        a(href="/diff/" + val.commitNum)
+          button See changes
+        span= " " + val.date + " " + val.author + " " + val.message
       br
       
     button#update(type="submit") /nodegit
     a(href="/history")
       button /history
+    a(href="/")
+      button home

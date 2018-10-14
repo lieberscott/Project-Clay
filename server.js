@@ -43,7 +43,7 @@ app.get('/', (req, res) => {
         sectionsArr.push(x);
       }
     });
-    // this needs to go here in the callback so the files are copied locally before being sent to the browser
+    // res needs to go here in the callback so sectionsArr isn't sent to the browser before all files have been included in it
     res.render(process.cwd() + "/views/index.pug", { sectionsArr });
   });
   
@@ -95,37 +95,176 @@ app.get('/nodegit', (req, res) => {
 });
 
 
-app.get('/clone', (req, res) => {
+
+app.get('/diff/:oid', (req, res) => {
   
-  nodegit.Clone("https://github.com/lieberscott/git-nodegit", "nodegit-tmp").then((repository) => {
-    // Work with the repository object here.
-    console.log(repository);
+  let oid = req.params.oid;
+  
+  // will push differences for each file into this array
+  let diffArr = [];
+  // will hold metadata like oid, author, date, and commit message
+  let metadata = {};
+  
+  nodegit.Repository.open(path.resolve(newLocalDir, "./.git"))
+  .then((repo) => {
+    return repo.getCommit(oid);
   })
-  .catch((err) => console.log(err)); // that's all!
-  
-  res.send({ response: "cloned" });
-});
+  .then((commit) => {
+    metadata.oid = commit.sha();
+    metadata.author = commit.author().name() + " <" + commit.author().email() + ">";
+    metadata.date = commit.date();
+    metadata.message = commit.message();
 
-app.get('/open', (req, res) => {
-  
-  const getMostRecentCommit = (repository) => {
-    return repository.getBranchCommit("master");
-  };
+    return commit.getDiff();
+  })
+  .done((diffList) => {
+    diffList.forEach((diff) => {
+      diff.patches()
+      .then((patches) => {
+        patches.forEach((patch, patchind, patcharr) => {
+          // patcharr.length is number of files that were changed
+          let fileChanges = patcharr.length;
+          patch.hunks().then((hunks) => {
+            // need to wrap this in a Promise to make sure it resolves synchronously
+            let filesPromise = new Promise((resolve, reject) => {
+              hunks.forEach((hunk) => {
+                hunk.lines().then((lines) => {
+                  
+                  // obj will hold differences for each file that was changed
+                  let diffObj = {};
+                  let linesArr = [];
+                  
+                  diffObj.file = patch.oldFile().path(); // newFile.txt, newFile2.txt, etc.
+                  diffObj.lines = linesArr;
+                  // console.log("diff", patch.oldFile().path(), patch.newFile().path()); <- keeping this in case new file and old file have different names, this is how to access the names of each
+                  
+                  // need to wrap this in a promise so it can finish before response is sent
+                  let linesPromise = new Promise((innerresolve, innerreject) => {
+                    lines.forEach((line) => {
+                      let lineText = String.fromCharCode(line.origin()) + line.content().trim();
 
-  const getCommitMessage = (commit) => {
-    return commit.message();
-  };
+                      // don't include this Github error if it appears
+                      if (!lineText.includes("No newline at end of file")) {
+                        diffObj.lines.push(lineText);
+                      }
+                    });
+                    
+                    // each line has been evaluated, so push the completed object with all changed lines into the diffArr
+                    diffArr.push(diffObj);
 
-  nodegit.Repository.open("nodegit-tmp")
-    .then(getMostRecentCommit)
-    .then(getCommitMessage)
-    .then((msg) => {
-      console.log(msg);
+                    if (diffArr.length == fileChanges) {
+                      innerresolve();
+                    }
+                  })
+                  .then(() => console.log("this executes after diffArr is finished"))
+                  .catch((err) => console.log(err));
+
+                  return linesPromise;
+
+                })
+                .then(() => {
+                  console.log("this also executes after diffArr is finished, but since it's later in process I'm putting the actual response here");
+
+                  /*
+                  *
+                  * Actually sending response here
+                  *
+                  */
+                  res.render(process.cwd() + "/views/diff.pug", { diffArr, metadata });
+
+
+                })
+                .catch((err) => console.log(err));
+              })
+              resolve();
+            })
+            return filesPromise;
+
+          })
+        });
+      });
+    });
   });
-  
-  res.json({ response: "open" });
-  
 });
+
+
+
+app.get('/tree', (req, res) => {
+  nodegit.Repository.open(path.resolve(newLocalDir, "./.git"))
+  .then(function(repo) {
+    return repo.getMasterCommit();
+  })
+  .then(function(firstCommitOnMaster) {
+      return firstCommitOnMaster.getTree();
+  })
+  .then(function(tree) {
+    // `walk()` returns an event.
+    var walker = tree.walk();
+    walker.on("entry", function(entry) {
+      console.log("entry1 : ", entry);
+      console.log("entry path : ", entry.path());
+    });
+
+    // Don't forget to call `start()`!
+    walker.start();
+  })
+  .done();
+  
+  res.json({ response: "tree" });
+});
+
+
+
+app.get('/history', (req, res) => {
+  
+  // will store array of histories
+  let histArr = [];
+  
+  nodegit.Repository.open(path.resolve(newLocalDir, "./.git"))
+  .then((repo) => {
+    return repo.getMasterCommit();
+  })
+  .then((firstCommitOnMaster) => {
+    // History returns an event.
+    let history = firstCommitOnMaster.history(nodegit.Revwalk.SORT.TIME);
+    
+    // need to create a Promise so that it can resolve and be returned before executing .done() below (https://stackoverflow.com/questions/42060676/return-after-all-on-events-are-called-inside-a-js-promise)
+    let commitPromise = new Promise((resolve, reject) => {
+      // History emits "commit" event for each commit in the branch's history
+      history.on("commit", (commit) => {
+      
+        let hist = {};
+
+        hist.commitNum = commit.sha();
+        hist.author = commit.author().name(); // + " <" + commit.author().email() + " >"
+        hist.date = commit.date();
+        hist.message = commit.message();
+
+        histArr.push(hist);
+
+        if (histArr.length > 10) {
+          resolve(); // resolve the promise
+          history.end();
+        }
+      })
+    }).
+    catch((err) => {
+      console.log(err);
+      res.json({ response: "error" });
+    });
+    
+    history.start();
+    
+    return commitPromise;
+
+  })
+  .done(() => {
+    res.render(process.cwd() + "/views/history.pug", { histArr });
+  });
+});
+
+
+
 
 app.get('/update', (req, res) => {
   // Open a repository that needs to be fetched and fast-forwarded
@@ -144,8 +283,7 @@ app.get('/update', (req, res) => {
         }
       });
     })
-    // Now that we're finished fetching, go ahead and merge our local branch
-    // with the new one
+    // Now that we're finished fetching, go ahead and merge our local branch with the new one
     .then(function() {
       return repo.mergeBranches("master", "origin/master");
     })
@@ -156,19 +294,19 @@ app.get('/update', (req, res) => {
   res.json({ response: "update" });
 });
 
-app.get('/read', (req, res) => {
-  fs.readdir(newLocalDir, (err, files) => {
-    files.forEach(file => {
-      console.log(file);
-    });
-  });
+
+
+app.get('/clone', (req, res) => {
   
-  let readMe = fs.readFileSync('./nodegit-tmp/README.md', 'utf8');
-  console.log(readMe);
+  nodegit.Clone("https://github.com/lieberscott/git-nodegit", "nodegit-tmp").then((repository) => {
+    // Work with the repository object here.
+    console.log(repository);
+  })
+  .catch((err) => console.log(err)); // that's all!
   
-  res.json({ response: "read" });
-  
+  res.send({ response: "cloned" });
 });
+
 
 // listen for requests :)
 let listener = app.listen(process.env.PORT, function() {
