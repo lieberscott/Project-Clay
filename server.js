@@ -97,25 +97,98 @@ app.get('/nodegit', (req, res) => {
 
 
 app.get('/diff/:oid', (req, res) => {
+  // STEP 0: OPEN REPO AND FIND COMMIT YOU'RE LOOKING FOR
+  // STEP 1: GET FILE NAMES FOR CLICKED COMMIT
+  // STEP 2: GET FILE TEXT FOR CLICKED COMMIT
+  // STEP 3: GET DIFF BETWEEN CLICKED COMMIT AND ITS NEXT-MOST-RECENT PREDECESSOR
   
+  // comes from the url
   let oid = req.params.oid;
   
-  // will push differences for each file into this array
+  // will push differences between each file into this array ('+this is working, right?', '-gonna check this', etc.)
   let diffArr = [];
-  // will hold metadata like oid, author, date, and commit message
-  let metadata = {};
   
+  // will hold metadata of commit like oid, author, date, and commit message
+  let commitMetadata = {};
+  
+  // will be used to make copy of commit to be reused (need to use commit over and over to get all info for this section)
+  let commitCopy;
+  
+  // will be used to hold names of ALL (not just those that were changed) files in tree at time of commit ('newFile.txt', 'newFile2.txt', etc.)
+  let filenamesArr = [];
+  
+  // will be used to hold copy of ALL (not just those that were changed) file blobs (which includes text and other metadata) to be used in subsequent .then() call
+  let entriesArr = [];
+  
+  // will be used to hold text of each file to display and send back to client
+  let fileTextArr = [];
+  
+  // STEP 0: OPEN REPO AND GET COMMIT YOU WANT TO EXAMINE
   nodegit.Repository.open(path.resolve(newLocalDir, "./.git"))
   .then((repo) => {
     return repo.getCommit(oid);
   })
   .then((commit) => {
-    metadata.oid = commit.sha();
-    metadata.author = commit.author().name() + " <" + commit.author().email() + ">";
-    metadata.date = commit.date();
-    metadata.message = commit.message();
+    
+    commitCopy = commit;
+    
+    commitMetadata.oid = commit.sha();
+    commitMetadata.author = commit.author().name() + " <" + commit.author().email() + ">";
+    commitMetadata.date = commit.date();
+    commitMetadata.message = commit.message();
+    
+    
+    // STEP 1: GET FILE NAMES INTO ARRAY BY VIEWING TREE AT COMMIT POINT
+    let treePromise = new Promise((resolve, reject) => {
+      commitCopy.getTree()
+      .then((tree) => {
+        let walker = tree.walk();
+        walker.on("entry", (entry) => {
+          if (entry.path() != "README.md" && entry.path() != ".git") {
+            filenamesArr.push(entry.path());
+          }
+        });
 
-    return commit.getDiff();
+        // Don't forget to call `start()`!
+        walker.start();
+      })
+      .done(() => resolve());
+      // END TREE CODE
+    });
+    
+    return treePromise;
+
+  })
+  // STEP 2: RETURN TEXT OF EACH FILE AT COMMIT (NAME OF EACH FILE IS AT THIS POINT IN AN ARRAY)
+  .then(() => {
+    console.log("filenamesArr : ", filenamesArr);
+    return Promise.all(filenamesArr.map((filename) => {
+      return commitCopy.getEntry(filename);
+    }));
+  })
+  .then((entries) => {
+    // entries include metadata as well as text (text is contained in something called a 'blob' apparently?)
+    entriesArr = entries;
+    return Promise.all(entries.map((entry) => {
+      return entry.getBlob();
+    }))
+  })
+  .then((blobs) => {
+    blobs.forEach((blob, index) => {
+      
+      let obj = {};
+      obj.name = entriesArr[index].name();
+      obj.oid = entriesArr[index].sha(); // individual for each file
+      obj.text = blob.toString();
+      fileTextArr.push(obj);
+      
+    });
+  })
+  // END GET-TEXT-OF-EACH-FILE-AT-COMMIT CODE
+  // STEP 3: GET DIFF BETWEEN THIS COMMIT AND ITS NEXT-MOST-RECENT PREDECESSOR
+  .then(() => {
+    console.log("fileTextArr : ", fileTextArr);
+    return commitCopy.getDiff()
   })
   .done((diffList) => {
     diffList.forEach((diff) => {
@@ -123,7 +196,7 @@ app.get('/diff/:oid', (req, res) => {
       .then((patches) => {
         patches.forEach((patch, patchind, patcharr) => {
           // patcharr.length is number of files that were changed
-          let fileChanges = patcharr.length;
+          let fileChangesNum = patcharr.length;
           patch.hunks().then((hunks) => {
             // need to wrap this in a Promise to make sure it resolves synchronously
             let filesPromise = new Promise((resolve, reject) => {
@@ -134,8 +207,8 @@ app.get('/diff/:oid', (req, res) => {
                   let diffObj = {};
                   let linesArr = [];
                   
-                  diffObj.file = patch.oldFile().path(); // newFile.txt, newFile2.txt, etc.
-                  diffObj.lines = linesArr;
+                  diffObj.file = patch.oldFile().path(); // 'newFile.txt', 'newFile2.txt', etc.
+                  diffObj.lines = linesArr; // <- currently blank, will push the lines into this array in next step
                   // console.log("diff", patch.oldFile().path(), patch.newFile().path()); <- keeping this in case new file and old file have different names, this is how to access the names of each
                   
                   // need to wrap this in a promise so it can finish before response is sent
@@ -152,7 +225,7 @@ app.get('/diff/:oid', (req, res) => {
                     // each line has been evaluated, so push the completed object with all changed lines into the diffArr
                     diffArr.push(diffObj);
 
-                    if (diffArr.length == fileChanges) {
+                    if (diffArr.length == fileChangesNum) {
                       innerresolve();
                     }
                   })
@@ -170,7 +243,7 @@ app.get('/diff/:oid', (req, res) => {
                   * Actually sending response here
                   *
                   */
-                  res.render(process.cwd() + "/views/diff.pug", { diffArr, metadata });
+                  res.render(process.cwd() + "/views/diff.pug", { diffArr, commitMetadata });
 
 
                 })
@@ -185,6 +258,7 @@ app.get('/diff/:oid', (req, res) => {
       });
     });
   });
+
 });
 
 
@@ -192,7 +266,7 @@ app.get('/diff/:oid', (req, res) => {
 app.get('/tree', (req, res) => {
   nodegit.Repository.open(path.resolve(newLocalDir, "./.git"))
   .then(function(repo) {
-    return repo.getMasterCommit();
+    return repo.getCommit("fe8d5111e23d080410c6ab9fe9ed37651d0d8625");
   })
   .then(function(firstCommitOnMaster) {
       return firstCommitOnMaster.getTree();
@@ -212,6 +286,21 @@ app.get('/tree', (req, res) => {
   
   res.json({ response: "tree" });
 });
+
+
+app.get('/tree2', (req, res) => {
+  nodegit.Repository.open(path.resolve(newLocalDir, "./.git"))
+  .then(function(repo) {
+    return nodegit.Tree.lookup(repo, "fe8d5111e23d080410c6ab9fe9ed37651d0d8625", (data) => {
+      //callback
+      console.log(data);
+    })
+  })
+  
+  res.json({ response: "tree2" });
+});
+
+
 
 
 

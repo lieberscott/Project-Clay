@@ -1,6 +1,15 @@
 /*
 *
 *
+*
+* Oct. 14, 2018
+* created the {app}/diff page, which shows the changes made at that edit point
+* since it only shows changes, need to fetch ALL files from that commit so person can see entire "legislation" at that point (and put the changes in context)
+* Next steps: Add the ability to add a new section (or delete a section)
+* Next steps: Add additional columns (plain English explanation, link to general laws, etc.)
+*
+*
+*
 * Oct. 12, 2018
 * {app}/ populates the page with the text from each file in the LOCAL nodegit-tmp folder
 * clicking the /nodegit button grabs the text from each textbox, puts it in an array sectionsArr, sends an ajax req to {app}/nodegit, the server receives the info at {app}/nodegit, overwrites the files locally, then pushes the changes to the remote Github repo
