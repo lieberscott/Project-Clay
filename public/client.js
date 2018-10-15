@@ -6,7 +6,7 @@ const sectionsArr = [];
 // will get innerHTML of each section and add it to sectionsArr
 let sectionsText = "";
 
-// listen for update button click
+// save changes on git and update locally
 update.onclick = (e) => {
   e.preventDefault();
   
@@ -35,12 +35,25 @@ update.onclick = (e) => {
   console.log("update clicked");
 };
 
+// used to add green and red backgrounds on {app}/diff page
 const getHTML = () => {
- 
+  let lines = $("#main").find("div");
+  let regexadd = /^\+/;
+  let regexdel = /^\-/;
   
-  
+  for (let i = 0; i < lines.length; i++) {
+        
+    if (lines[i].innerHTML.match(regexadd)) {
+      // add green background
+      $(lines[i]).addClass("add");
+    }
+    
+    else if (lines[i].innerHTML.match(regexdel)) {
+      // add red background
+      $(lines[i]).addClass("del");
+    }
+
+  }
 }
-$(".line").each((div, index) => {
-  console.log(div);
-  console.log(index);
-});
+
+getHTML();

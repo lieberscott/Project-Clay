@@ -24,6 +24,14 @@ button:active {
   box-shadow: none;
 }
 
+.add {
+  background-color: #CCFFCC;
+}
+
+.del {
+  background-color: #FFCCE5;
+}
+
 .section {
   max-width: 300px;
 }
