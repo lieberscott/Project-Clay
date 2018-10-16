@@ -30,42 +30,39 @@ app.use(express.static("public"));
 app.set('view engine', 'pug');
 
 app.get('/', (req, res) => {
+    
+  let legText = fs.readFileSync("./nodegit-tmp/legText.txt", 'utf-8');
+  let plainLang = fs.readFileSync("./nodegit-tmp/plainLang.txt", 'utf-8');
+  let fisc10 = fs.readFileSync("./nodegit-tmp/fisc10.txt", 'utf-8');
   
-  let sectionsArr = [];
-  
-  fs.readdir(newLocalDir, (err, files) => {
-    files.forEach((file, index) => {
-      if (file == ".git" || file == "README.md") {
-        // do nothing
-      }
-      else {
-        let x = fs.readFileSync("./nodegit-tmp/" + file, 'utf8');
-        sectionsArr.push(x);
-      }
-    });
+  // split by "###########", remove last item of array (which will be a blank ""): this prevents buildup of "###########" at end of each file upon user editing on website
+  let legTextArr = legText.split("###########");
+  legTextArr.splice(-1, 1);
+  let plainLangArr = plainLang.split("###########");
+  plainLangArr.splice(-1, 1);
+  let fisc10Arr = fisc10.split("###########");
+  fisc10Arr.splice(-1, 1);
+    
     // res needs to go here in the callback so sectionsArr isn't sent to the browser before all files have been included in it
-    res.render(process.cwd() + "/views/index.pug", { sectionsArr });
-  });
+    res.render(process.cwd() + "/views/index.pug", { legTextArr, plainLangArr, fisc10Arr });
+  // });
   
 });
 
 app.get('/nodegit', (req, res) => {
 
-  let sectionsArr = req.query.sectionsArr;
+  let legTextArr = req.query.legTextArrUpdated;
+  let plainLangArr = req.query.plainLangArrUpdated;
+  let fisc10Arr = req.query.fisc10ArrUpdated;
   
-  console.log(sectionsArr);
-  
-  // get every local file name (minus '.git' and 'README.md') in an array so it can be overwritten and then pushed to Github remote
-  let filesArr = fs.readdirSync(newLocalDir).filter((file) => {
-    if (file.indexOf(".txt") > -1) {
-      return file;
-    }
-  });
+  console.log(legTextArr);
+  console.log(plainLangArr);
+  console.log(fisc10Arr);
 
   // overwrite every file with section text (even those that are unchanged, this can probably be optimized better)
-  filesArr.forEach((file, index) => {
-    fs.writeFileSync("nodegit-tmp/" + file, sectionsArr[index]);
-  });
+  fs.writeFileSync("nodegit-tmp/legText.txt", legTextArr.join(""));
+  fs.writeFileSync("nodegit-tmp/plainLang.txt", plainLangArr.join(""));
+  fs.writeFileSync("nodegit-tmp/fisc10.txt", fisc10Arr.join(""));
   
   // actually push changes to Github remote repo (in the cloud)
   nodegit.Repository.open(newLocalDir)
@@ -76,7 +73,7 @@ app.get('/nodegit', (req, res) => {
     .then(() => repo.refreshIndex()) // Refresh the directory (not totally sure what that means!!)
     .then((oid) => {
       // ([array of files to commit], author, commiter, message)
-      return repo.createCommitOnHead(filesArr, signature, signature, "updated by website");
+      return repo.createCommitOnHead(["legText.txt", "plainLang.txt", "fisc10.txt"], signature, signature, "updated by website");
     })
     .then((oidNum) => {
       oid = oidNum; // unused, but may need it for other operations later on
@@ -177,7 +174,7 @@ app.get('/diff/:oid', (req, res) => {
     blobs.forEach((blob, index) => {
       
       let obj = {};
-      obj.name = entriesArr[index].name();
+      obj.file = entriesArr[index].name(); // 'newFile.txt' (calling it 'file' to stay consistent with diffArr (where it's also called 'file')
       obj.oid = entriesArr[index].sha(); // individual for each file
       obj.text = blob.toString();
       fileTextArr.push(obj);
@@ -243,7 +240,7 @@ app.get('/diff/:oid', (req, res) => {
                   * Actually sending response here
                   *
                   */
-                  res.render(process.cwd() + "/views/diff.pug", { diffArr, commitMetadata });
+                  res.render(process.cwd() + "/views/diff.pug", { diffArr, commitMetadata, fileTextArr });
 
 
                 })
