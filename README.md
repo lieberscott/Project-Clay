@@ -1,12 +1,23 @@
 /*
 *
 *
+* Oct. 16, 2018
+* changing file system to include fiscal impact and plain language explanation
+* need to change the code to reflect this
+* have changed {app}/ and {app}/nodegit, both are working perfectly
+* need to update {app}/history to get history of changes in legislation file only
+* need to update {app}/diff to show differences between legislation at two points, and to pull the files correctly to display the "full legislation at that commit", so it displays like on the homepage
+* two steps above require the oid number be changed from the repo to the individual file (i think?)
+*
+*
 *
 * Oct. 14, 2018
 * created the {app}/diff page, which shows the changes made at that edit point
-* since it only shows changes, need to fetch ALL files from that commit so person can see entire "legislation" at that point (and put the changes in context)
+* also shows the full legislation at that point
 * Next steps: Add the ability to add a new section (or delete a section)
 * Next steps: Add additional columns (plain English explanation, link to general laws, etc.)
+* Next steps: Add ability to submit an amendment
+* Next steps: Add recursive formula so amendments are in an order without merge conflicts between earlier and later amendments
 *
 *
 *

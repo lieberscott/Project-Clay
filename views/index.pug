@@ -7,17 +7,32 @@ html(lang="en")
     meta(http-equiv="X-UA-Compatible" content="IE=edge")
     meta(name="viewport" content="width=device-width, initial-scale=1")
     link(rel="stylesheet" href="/style.css")
+    link(rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css")
     script(src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous")
     script(src="/client.js" defer)
     
     
   body
-    h1 An Act relative to Health Care Quality, Cost Control, and Transparency
-    p You can click inside the boxes to edit the text. Clicking "/nodegit" will permanently save the changes
-    each val, ind in sectionsArr
-      div.section(id="section" + ind contenteditable="true")= val
-      br
+    div.container
+      h1 An Act relative to Health Care Quality, Cost Control, and Transparency
+      p You can click inside the boxes to edit the text. Clicking "/nodegit" will permanently save the changes for all users (same funcationality as on Wikipedia)
       
-    button#update(type="submit") /nodegit
-    a(href="/history")
-      button /history
+      div.row
+        div.col-md-4.font-weight-bold Legislative text
+        div.col-md-4.font-weight-bold Plain text explanation
+        div.col-md-4.font-weight-bold 10-year fiscal impact
+      hr
+      
+      each val, ind in legTextArr
+        div.font-weight-bold Section 
+          span= (ind + 1)
+        div.row
+          div.col-md-4.legSection(id="legSection" + ind contenteditable="true")= val
+          div.col-md-4.plainSection(id="plainSection" + ind contenteditable="true")= plainLangArr[ind]
+          div.col-md-4.fisc10Section(id="fisc10Section" + ind contenteditable="true")= fisc10Arr[ind]
+        hr
+
+      
+      button#nodegit(type="submit") /nodegit
+      a(href="/history")
+        button /history

@@ -1,33 +1,46 @@
-const update = document.getElementById("update");
+const nodegit = document.getElementById("nodegit");
 const history = document.getElementById("history");
 
-const sectionsArr = [];
+// these arrays will hold updated text of each section if user makes changes and clicks ./nodegit button
+const legTextArrUpdated = [];
+const plainLangArrUpdated = [];
+const fisc10ArrUpdated = [];
 
-// will get innerHTML of each section and add it to sectionsArr
-let sectionsText = "";
-
-// save changes on git and update locally
-update.onclick = (e) => {
+// user clicks ./nodegit button save changes on git and update locally
+nodegit.onclick = (e) => {
   e.preventDefault();
   
   // putting this inside click event (rather than on page load) in case user adds a new section
-  const sections = document.querySelectorAll(".section");
+  let legSectionsUpdated = document.querySelectorAll(".legSection");
+  let plainSectionsUpdated = document.querySelectorAll(".plainSection");
+  let fisc10SectionsUpdated = document.querySelectorAll(".fisc10Section");
   
   // create an array of each section's text
-  for (let i = 0; i < sections.length; i++) {
-    sectionsText = document.getElementById("section" + i).innerHTML;
-    sectionsArr.push(sectionsText);
+  for (let i = 0; i < legSectionsUpdated.length; i++) {
+    let legText = "";
+    let plainLang = "";
+    let fisc10 = "";
+    
+    // get innerHTML of each section and add 11 hashes ###########
+    legText = document.getElementById("legSection" + i).innerHTML + "###########";
+    plainLang = document.getElementById("plainSection" + i).innerHTML + "###########";
+    fisc10 = document.getElementById("fisc10Section" + i).innerHTML + "###########";
+    
+    // add innerHTML to an array
+    legTextArrUpdated.push(legText);
+    plainLangArrUpdated.push(plainLang);
+    fisc10ArrUpdated.push(fisc10);
+    
   }
-  console.log(sectionsArr);
   // send data to backend
   
   $.ajax({
     url: "/nodegit",
     type: "get",
-    data: { sectionsArr },
+    data: { legTextArrUpdated, plainLangArrUpdated, fisc10ArrUpdated },
     success: (res) => {
       if (res.result == "nodegit") {
-        console.log("it updated!");
+        window.location.replace("/history");
       }
     }
   });
@@ -37,7 +50,7 @@ update.onclick = (e) => {
 
 // used to add green and red backgrounds on {app}/diff page
 const getHTML = () => {
-  let lines = $("#main").find("div");
+  let lines = $("#differences").find("div");
   let regexadd = /^\+/;
   let regexdel = /^\-/;
   
