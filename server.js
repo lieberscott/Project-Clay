@@ -94,9 +94,8 @@ app.get('/nodegit', (req, res) => {
 
 
 app.get('/diff/:oid', (req, res) => {
-  // STEP 0: OPEN REPO AND FIND COMMIT YOU'RE LOOKING FOR
-  // STEP 1: GET FILE NAMES FOR CLICKED COMMIT
-  // STEP 2: GET FILE TEXT FOR CLICKED COMMIT
+  // STEP 1: OPEN REPO AND FIND COMMIT YOU'RE LOOKING FOR
+  // STEP 2: GET FILE TEXT FOR EACH FILE YOU NEED WITHIN CLICKED COMMIT ['legText.txt', 'plainLang.txt', etc.]
   // STEP 3: GET DIFF BETWEEN CLICKED COMMIT AND ITS NEXT-MOST-RECENT PREDECESSOR
   
   // comes from the url
@@ -112,15 +111,17 @@ app.get('/diff/:oid', (req, res) => {
   let commitCopy;
   
   // will be used to hold names of ALL (not just those that were changed) files in tree at time of commit ('newFile.txt', 'newFile2.txt', etc.)
-  let filenamesArr = [];
+  let filenamesArr = ["legText.txt", "plainLang.txt", "fisc10.txt"];
   
   // will be used to hold copy of ALL (not just those that were changed) file blobs (which includes text and other metadata) to be used in subsequent .then() call
   let entriesArr = [];
   
   // will be used to hold text of each file to display and send back to client
-  let fileTextArr = [];
-  
-  // STEP 0: OPEN REPO AND GET COMMIT YOU WANT TO EXAMINE
+  let legTextArr = [];
+  let plainLangArr = [];
+  let fisc10Arr = [];
+
+  // STEP 1: OPEN REPO AND GET COMMIT YOU WANT TO EXAMINE
   nodegit.Repository.open(path.resolve(newLocalDir, "./.git"))
   .then((repo) => {
     return repo.getCommit(oid);
@@ -133,27 +134,6 @@ app.get('/diff/:oid', (req, res) => {
     commitMetadata.author = commit.author().name() + " <" + commit.author().email() + ">";
     commitMetadata.date = commit.date();
     commitMetadata.message = commit.message();
-    
-    
-    // STEP 1: GET FILE NAMES INTO ARRAY BY VIEWING TREE AT COMMIT POINT
-    let treePromise = new Promise((resolve, reject) => {
-      commitCopy.getTree()
-      .then((tree) => {
-        let walker = tree.walk();
-        walker.on("entry", (entry) => {
-          if (entry.path() != "README.md" && entry.path() != ".git") {
-            filenamesArr.push(entry.path());
-          }
-        });
-
-        // Don't forget to call `start()`!
-        walker.start();
-      })
-      .done(() => resolve());
-      // END TREE CODE
-    });
-    
-    return treePromise;
 
   })
   // STEP 2: RETURN TEXT OF EACH FILE AT COMMIT (NAME OF EACH FILE IS AT THIS POINT IN AN ARRAY)
@@ -165,26 +145,25 @@ app.get('/diff/:oid', (req, res) => {
   })
   .then((entries) => {
     // entries include metadata as well as text (text is contained in something called a 'blob' apparently?)
-    entriesArr = entries;
+    // entriesArr = entries;
     return Promise.all(entries.map((entry) => {
       return entry.getBlob();
     }))
   })
   .then((blobs) => {
-    blobs.forEach((blob, index) => {
-      
-      let obj = {};
-      obj.file = entriesArr[index].name(); // 'newFile.txt' (calling it 'file' to stay consistent with diffArr (where it's also called 'file')
-      obj.oid = entriesArr[index].sha(); // individual for each file
-      obj.text = blob.toString();
-      fileTextArr.push(obj);
-      
-    });
+    
+    // break up each document ('legText.txt', 'plainLang.txt', etc.) by section into an array, split by hashes, then pop off the last one (because it will be "" blank)
+    legTextArr = blobs[0].toString().split("###########");
+    legTextArr.splice(-1, 1);
+    plainLangArr = blobs[1].toString().split("###########");
+    plainLangArr.splice(-1, 1);
+    fisc10Arr = blobs[2].toString().split("###########");
+    fisc10Arr.splice(-1, 1);
+
   })
   // END GET-TEXT-OF-EACH-FILE-AT-COMMIT CODE
-  // STEP 3: GET DIFF BETWEEN THIS COMMIT AND ITS NEXT-MOST-RECENT PREDECESSOR
+  // STEP 3: GET DIFF BETWEEN THIS COMMIT'S 'legText.txt' AND ITS NEXT-MOST-RECENT PREDECESSOR
   .then(() => {
-    console.log("fileTextArr : ", fileTextArr);
     return commitCopy.getDiff()
   })
   .done((diffList) => {
@@ -193,40 +172,51 @@ app.get('/diff/:oid', (req, res) => {
       .then((patches) => {
         patches.forEach((patch, patchind, patcharr) => {
           // patcharr.length is number of files that were changed
-          let fileChangesNum = patcharr.length;
+          // let fileChangesNum = patcharr.length; <- don't need this any more
           patch.hunks().then((hunks) => {
             // need to wrap this in a Promise to make sure it resolves synchronously
             let filesPromise = new Promise((resolve, reject) => {
               hunks.forEach((hunk) => {
+                console.log(hunk.lines());
                 hunk.lines().then((lines) => {
-                  
-                  // obj will hold differences for each file that was changed
+                  console.log(hunk.header());
+                  console.log(hunk.header().trim());
                   let diffObj = {};
                   let linesArr = [];
-                  
-                  diffObj.file = patch.oldFile().path(); // 'newFile.txt', 'newFile2.txt', etc.
-                  diffObj.lines = linesArr; // <- currently blank, will push the lines into this array in next step
-                  // console.log("diff", patch.oldFile().path(), patch.newFile().path()); <- keeping this in case new file and old file have different names, this is how to access the names of each
-                  
-                  // need to wrap this in a promise so it can finish before response is sent
+                  diffObj.lines = linesArr;
                   let linesPromise = new Promise((innerresolve, innerreject) => {
                     lines.forEach((line) => {
-                      let lineText = String.fromCharCode(line.origin()) + line.content().trim();
-
+                      
+                      // separating by hashes, +hashes, or -hashes (if they were "changed" in previous commit, they will have a +/- in front of them and we don't want them included in our display)
+                      // popping off last item (which will be blank ""), then rejoining the string
+                      const separator = /(-|\+)?###########/g
+                      let lineTextTemp = String.fromCharCode(line.origin()) + line.content().trim();
+                      let lineText = lineTextTemp.replace(separator, "\n");
                       // don't include this Github error if it appears
                       if (!lineText.includes("No newline at end of file")) {
                         diffObj.lines.push(lineText);
                       }
                     });
-                    
-                    // each line has been evaluated, so push the completed object with all changed lines into the diffArr
-                    diffArr.push(diffObj);
-
-                    if (diffArr.length == fileChangesNum) {
+                      
+                    // currently doing this for EVERY file and only pushing if it's for legText.txt (this can be made more efficient)
+                    if (patch.oldFile().path() == "legText.txt") {
+                      diffArr.push(diffObj);
+                      console.log(diffArr);
                       innerresolve();
                     }
                   })
-                  .then(() => console.log("this executes after diffArr is finished"))
+                  .then(() => {
+                    console.log("this executes after diffArr is finished");    
+                    
+                    for (let i = 0; i < legTextArr.length; i++) {
+                      for (let j = 0; j < diffArr.length; j++) {
+                        if (legTextArr[i] == diffArr[j]) {
+                          console.log("hello!");
+                        }
+                      }
+                    }
+                    
+                  })
                   .catch((err) => console.log(err));
 
                   return linesPromise;
@@ -240,7 +230,7 @@ app.get('/diff/:oid', (req, res) => {
                   * Actually sending response here
                   *
                   */
-                  res.render(process.cwd() + "/views/diff.pug", { diffArr, commitMetadata, fileTextArr });
+                  res.render(process.cwd() + "/views/diff.pug", { diffArr, commitMetadata, legTextArr, plainLangArr, fisc10Arr });
 
 
                 })
@@ -285,68 +275,79 @@ app.get('/tree', (req, res) => {
 });
 
 
-app.get('/tree2', (req, res) => {
-  nodegit.Repository.open(path.resolve(newLocalDir, "./.git"))
-  .then(function(repo) {
-    return nodegit.Tree.lookup(repo, "fe8d5111e23d080410c6ab9fe9ed37651d0d8625", (data) => {
-      //callback
-      console.log(data);
-    })
-  })
-  
-  res.json({ response: "tree2" });
-});
-
-
-
-
 
 app.get('/history', (req, res) => {
+
+  // nodegit example code
+  const historyFile = "legText.txt";
+  let walker;
+  let commitArr = [];
+  let commit;
+  let repo;
   
-  // will store array of histories
+  // will hold actual array of data I need
   let histArr = [];
-  
+
+  // this function
+  const compileHistory = (resultingArrayOfCommits) => {
+    let lastSha;
+    if (commitArr.length > 0) {
+      lastSha = commitArr[commitArr.length - 1].commit.sha();
+      if (resultingArrayOfCommits.length == 1 && resultingArrayOfCommits[0].commit.sha() == lastSha) {
+        return;
+      }
+    }
+
+    resultingArrayOfCommits.forEach((entry) => {
+      commitArr.push(entry);
+    });
+
+    lastSha = commitArr[commitArr.length - 1].commit.sha();
+
+    walker = repo.createRevWalk();
+    walker.push(lastSha);
+    walker.sorting(nodegit.Revwalk.SORT.TIME);
+
+    return walker.fileHistoryWalk(historyFile, 500)
+      .then(compileHistory);
+  }
+
   nodegit.Repository.open(path.resolve(newLocalDir, "./.git"))
-  .then((repo) => {
+  .then((r) => {
+    repo = r;
     return repo.getMasterCommit();
   })
   .then((firstCommitOnMaster) => {
-    // History returns an event.
-    let history = firstCommitOnMaster.history(nodegit.Revwalk.SORT.TIME);
-    
-    // need to create a Promise so that it can resolve and be returned before executing .done() below (https://stackoverflow.com/questions/42060676/return-after-all-on-events-are-called-inside-a-js-promise)
-    let commitPromise = new Promise((resolve, reject) => {
-      // History emits "commit" event for each commit in the branch's history
-      history.on("commit", (commit) => {
-      
-        let hist = {};
+    // History returns an event
+    walker = repo.createRevWalk();
+    walker.push(firstCommitOnMaster.sha());
+    walker.sorting(nodegit.Revwalk.SORT.Time);
 
-        hist.commitNum = commit.sha();
-        hist.author = commit.author().name(); // + " <" + commit.author().email() + " >"
-        hist.date = commit.date();
-        hist.message = commit.message();
+    return walker.fileHistoryWalk(historyFile, 500);
+  })
+  .then(compileHistory)
+  .catch((err) => {
+    console.log(err);
+    res.json({ response: "Error: " + err });
+  })
+  .then(() => {
+    commitArr.forEach((entry) => {
+      commit = entry.commit;
 
-        histArr.push(hist);
+      let hist = {};
 
-        if (histArr.length > 10) {
-          resolve(); // resolve the promise
-          history.end();
-        }
-      })
-    }).
-    catch((err) => {
-      console.log(err);
-      res.json({ response: "error" });
+      hist.commitNum = commit.sha();
+      hist.author = commit.author().name(); // + " <" + commit.author().email() + " >"
+      hist.date = commit.date();
+      hist.message = commit.message();
+
+      histArr.push(hist);
     });
-    
-    history.start();
-    
-    return commitPromise;
-
   })
   .done(() => {
     res.render(process.cwd() + "/views/history.pug", { histArr });
   });
+  
 });
 
 

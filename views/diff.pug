@@ -7,31 +7,35 @@ html(lang="en")
     meta(http-equiv="X-UA-Compatible" content="IE=edge")
     meta(name="viewport" content="width=device-width, initial-scale=1")
     link(rel="stylesheet" href="/style.css")
+    link(rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css")
     script(src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous")
     script(src="/client.js" defer)
     
     
   body
-    h1 Changes
-    h4= commitMetadata.author + " " + commitMetadata.date + " " + commitMetadata.message
-    div#differences
-      each val, ind in diffArr
-        h5= "SECTION " + val.file
-        each item, index in val.lines
-          div.line= item
-        br
-        
-    h1 Full Legislation at this point
-    div
-      each val, ind in fileTextArr
-        h5= "SECTION " + val.file
-        div !{val.text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br/>')}
-          // convert /n to <br/> ~~~7
-        br
+    div.container.container-fluid
+      h1 Changes
+      h4= commitMetadata.author + " " + commitMetadata.date + " " + commitMetadata.message
+      div#differences
+        each val, ind in diffArr
+          h5= "SECTION " + val.file
+          each item, index in val.lines
+            div.line !{item.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br/>')}
+          br
 
-      
-    button#nodegit(type="submit") /nodegit
-    a(href="/history")
-      button /history
-    a(href="/")
-      button home
+      h1 Full Legislation at this point
+      div
+        each val, ind in legTextArr
+          h5= "SECTION " + (ind + 1)
+          div.row
+            div.col-md-4= val
+            div.col-md-4= plainLangArr[ind]
+            div.col-md-4= fisc10Arr[ind]
+          hr
+
+
+      button#nodegit(type="submit") /nodegit
+      a(href="/history")
+        button /history
+      a(href="/")
+        button home
