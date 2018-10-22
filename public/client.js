@@ -22,9 +22,9 @@ nodegit.onclick = (e) => {
     let fisc10 = "";
     
     // get innerHTML of each section and add 11 hashes ###########
-    legText = document.getElementById("legSection" + i).innerHTML + "###########";
-    plainLang = document.getElementById("plainSection" + i).innerHTML + "###########";
-    fisc10 = document.getElementById("fisc10Section" + i).innerHTML + "###########";
+    legText = "########### SECTION " + (i+1) + document.getElementById("legSection" + i).innerHTML;
+    plainLang = "########### SECTION " + (i+1) + document.getElementById("plainSection" + i).innerHTML;
+    fisc10 = "########### SECTION " + (i+1) + document.getElementById("fisc10Section" + i).innerHTML;
     
     // add innerHTML to an array
     legTextArrUpdated.push(legText);
