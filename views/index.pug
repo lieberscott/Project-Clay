@@ -27,7 +27,7 @@ html(lang="en")
         div.font-weight-bold Section 
           span= (ind + 1)
         div.row
-          div.col-md-4.legSection(id="legSection" + ind contenteditable="true")= val
+          div.col-md-4.legSection(id="legSection" + ind contenteditable="true") !{val.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br/>')}
           div.col-md-4.plainSection(id="plainSection" + ind contenteditable="true")= plainLangArr[ind]
           div.col-md-4.fisc10Section(id="fisc10Section" + ind contenteditable="true")= fisc10Arr[ind]
         hr

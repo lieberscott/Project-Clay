@@ -18,7 +18,6 @@ html(lang="en")
       h4= commitMetadata.author + " " + commitMetadata.date + " " + commitMetadata.message
       div#differences
         each val, ind in diffArr
-          h5= "SECTION " + val.file
           each item, index in val.lines
             div.line !{item.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br/>')}
           br

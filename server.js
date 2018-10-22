@@ -36,12 +36,12 @@ app.get('/', (req, res) => {
   let fisc10 = fs.readFileSync("./nodegit-tmp/fisc10.txt", 'utf-8');
   
   // split by "###########", remove last item of array (which will be a blank ""): this prevents buildup of "###########" at end of each file upon user editing on website
-  let legTextArr = legText.split("###########");
-  legTextArr.splice(-1, 1);
-  let plainLangArr = plainLang.split("###########");
-  plainLangArr.splice(-1, 1);
-  let fisc10Arr = fisc10.split("###########");
-  fisc10Arr.splice(-1, 1);
+  let legTextArr = legText.split(/########### SECTION [0-9]+/g);
+  legTextArr.splice(0, 1);
+  let plainLangArr = plainLang.split(/########### SECTION [0-9]+/g);
+  plainLangArr.splice(0, 1);
+  let fisc10Arr = fisc10.split(/########### SECTION [0-9]+/g);
+  fisc10Arr.splice(0, 1);
     
     // res needs to go here in the callback so sectionsArr isn't sent to the browser before all files have been included in it
     res.render(process.cwd() + "/views/index.pug", { legTextArr, plainLangArr, fisc10Arr });
@@ -120,6 +120,10 @@ app.get('/diff/:oid', (req, res) => {
   let legTextArr = [];
   let plainLangArr = [];
   let fisc10Arr = [];
+  
+  let diffObj = {};
+  let linesArr = [];
+  diffObj.lines = linesArr;
 
   // STEP 1: OPEN REPO AND GET COMMIT YOU WANT TO EXAMINE
   nodegit.Repository.open(path.resolve(newLocalDir, "./.git"))
@@ -135,9 +139,7 @@ app.get('/diff/:oid', (req, res) => {
     commitMetadata.date = commit.date();
     commitMetadata.message = commit.message();
 
-  })
-  // STEP 2: RETURN TEXT OF EACH FILE AT COMMIT (NAME OF EACH FILE IS AT THIS POINT IN AN ARRAY)
-  .then(() => {
+    // STEP 2: RETURN TEXT OF EACH FILE AT COMMIT (NAME OF EACH FILE IS AT THIS POINT IN AN ARRAY)
     console.log("filenamesArr : ", filenamesArr);
     return Promise.all(filenamesArr.map((filename) => {
       return commitCopy.getEntry(filename);
@@ -145,107 +147,76 @@ app.get('/diff/:oid', (req, res) => {
   })
   .then((entries) => {
     // entries include metadata as well as text (text is contained in something called a 'blob' apparently?)
-    // entriesArr = entries;
     return Promise.all(entries.map((entry) => {
       return entry.getBlob();
     }))
   })
   .then((blobs) => {
-    
-    // break up each document ('legText.txt', 'plainLang.txt', etc.) by section into an array, split by hashes, then pop off the last one (because it will be "" blank)
-    legTextArr = blobs[0].toString().split("###########");
-    legTextArr.splice(-1, 1);
-    plainLangArr = blobs[1].toString().split("###########");
-    plainLangArr.splice(-1, 1);
-    fisc10Arr = blobs[2].toString().split("###########");
-    fisc10Arr.splice(-1, 1);
-
-  })
-  // END GET-TEXT-OF-EACH-FILE-AT-COMMIT CODE
-  // STEP 3: GET DIFF BETWEEN THIS COMMIT'S 'legText.txt' AND ITS NEXT-MOST-RECENT PREDECESSOR
-  .then(() => {
-    return commitCopy.getDiff()
+    // break up each document ('legText.txt', 'plainLang.txt', etc.) by section into an array, split by hashes, then pop off the first one (because it will be "" blank)
+    legTextArr = blobs[0].toString().split(/########### SECTION [0-9]+/g);
+    legTextArr.splice(0, 1);
+    plainLangArr = blobs[1].toString().split(/########### SECTION [0-9]+/g);
+    plainLangArr.splice(0, 1);
+    fisc10Arr = blobs[2].toString().split(/########### SECTION [0-9]+/g);
+    fisc10Arr.splice(0, 1);
+    // END GET-TEXT-OF-EACH-FILE-AT-COMMIT CODE
+    // STEP 3: GET DIFF BETWEEN THIS COMMIT'S 'legText.txt' AND ITS NEXT-MOST-RECENT PREDECESSOR
+    return commitCopy.getDiff();
   })
   .done((diffList) => {
-    diffList.forEach((diff) => {
-      diff.patches()
-      .then((patches) => {
-        patches.forEach((patch, patchind, patcharr) => {
-          // patcharr.length is number of files that were changed
-          // let fileChangesNum = patcharr.length; <- don't need this any more
-          patch.hunks().then((hunks) => {
-            // need to wrap this in a Promise to make sure it resolves synchronously
-            let filesPromise = new Promise((resolve, reject) => {
-              hunks.forEach((hunk) => {
-                console.log(hunk.lines());
-                hunk.lines().then((lines) => {
-                  console.log(hunk.header());
-                  console.log(hunk.header().trim());
-                  let diffObj = {};
-                  let linesArr = [];
-                  diffObj.lines = linesArr;
-                  let linesPromise = new Promise((innerresolve, innerreject) => {
-                    lines.forEach((line) => {
-                      
-                      // separating by hashes, +hashes, or -hashes (if they were "changed" in previous commit, they will have a +/- in front of them and we don't want them included in our display)
-                      // popping off last item (which will be blank ""), then rejoining the string
-                      const separator = /(-|\+)?###########/g
-                      let lineTextTemp = String.fromCharCode(line.origin()) + line.content().trim();
-                      let lineText = lineTextTemp.replace(separator, "\n");
-                      // don't include this Github error if it appears
-                      if (!lineText.includes("No newline at end of file")) {
-                        diffObj.lines.push(lineText);
-                      }
-                    });
-                      
-                    // currently doing this for EVERY file and only pushing if it's for legText.txt (this can be made more efficient)
-                    if (patch.oldFile().path() == "legText.txt") {
-                      diffArr.push(diffObj);
-                      console.log(diffArr);
-                      innerresolve();
-                    }
-                  })
-                  .then(() => {
-                    console.log("this executes after diffArr is finished");    
-                    
-                    for (let i = 0; i < legTextArr.length; i++) {
-                      for (let j = 0; j < diffArr.length; j++) {
-                        if (legTextArr[i] == diffArr[j]) {
-                          console.log("hello!");
-                        }
-                      }
-                    }
-                    
-                  })
-                  .catch((err) => console.log(err));
+    
+    // diffList will always be an array of one [diff]
+    diffList[0].patches().then((patches) => {
+      let patchNum;
 
-                  return linesPromise;
-
-                })
-                .then(() => {
-                  console.log("this also executes after diffArr is finished, but since it's later in process I'm putting the actual response here");
-
-                  /*
-                  *
-                  * Actually sending response here
-                  *
-                  */
-                  res.render(process.cwd() + "/views/diff.pug", { diffArr, commitMetadata, legTextArr, plainLangArr, fisc10Arr });
-
-
-                })
-                .catch((err) => console.log(err));
-              })
-              resolve();
-            })
-            return filesPromise;
-
-          })
-        });
+      // find which patch in array is 'legText.txt' so you only need to do operations on that one rather than all files
+      patches.forEach((patch, ind_patch) => {
+        if (patch.oldFile().path() == "legText.txt") {
+          patchNum = ind_patch;
+        }
       });
+
+      return patches[patchNum].hunks();
+      
+    })
+    .then((hunks) => {   
+      // wrap in a Promise so you don't res.render before the diffArr is finished
+      let hunksPromise = new Promise((hunks_resolve, hunks_reject) => {
+        hunks.forEach((hunk, hunk_index, hunk_arr) => {
+          console.log(hunk_arr);
+          return hunk.lines()
+          .then((lines) => {
+            console.log("lines");
+            lines.forEach((line) => {
+              const separator = /(-|\+)?###########/g
+              let lineTextTemp = String.fromCharCode(line.origin()) + line.content().trim();
+              let lineText = lineTextTemp.replace(separator, " ");
+
+              if (!lineText.includes("No newline at end of file")) {
+                diffObj.lines.push(lineText);
+              }
+              
+            });
+            // diffArr.lines.push("/n");
+          })
+          .then(() => {
+            if (hunk_index == hunk_arr.length - 1) {
+              // all lines have been added to the diffArr, so resolve the Promise
+              hunks_resolve();
+            }
+          });
+        })
+      })
+      
+      // return Promise here so it finishes before continuing to .done() (where you res.render)
+      return hunksPromise;
+    })
+    .done(() => {
+      diffArr.push(diffObj);
+      console.log(diffArr);
+      res.render(process.cwd() + "/views/diff.pug", { diffArr, commitMetadata, legTextArr, plainLangArr, fisc10Arr });
     });
   });
-
 });
 
 
