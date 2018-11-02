@@ -40,7 +40,6 @@ packages:
     hasBin: true
     resolution:
       integrity: sha1-ReN/s56No/JbruP/U2niu18iAXo=
-      tarball: 'http://registry.npmjs.org/acorn/-/acorn-3.3.0.tgz'
   /acorn/4.0.13:
     dev: false
     engines:
@@ -1619,7 +1618,6 @@ packages:
     dev: false
     resolution:
       integrity: sha1-9+572FfdfB0tOMDnTvvWgdFDH9E=
-      tarball: 'http://registry.npmjs.org/yargs/-/yargs-3.10.0.tgz'
 registry: 'https://registry.npmjs.org/'
 shrinkwrapMinorVersion: 9
 shrinkwrapVersion: 3
