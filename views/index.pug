@@ -9,6 +9,7 @@ html(lang="en")
     link(rel="stylesheet" href="/style.css")
     link(rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css")
     script(src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous")
+    script(src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js" integrity="sha256-VazP97ZCwtekAsvgPBSUwPFKdrwD3unUfSGVYrahUqU=" crossorigin="anonymous")
     script(src="/client.js" defer)
     
     
@@ -23,16 +24,16 @@ html(lang="en")
         div.col-md-4.font-weight-bold 10-year fiscal impact
       hr
       
+      //div#sortable
       each val, ind in legTextArr
         div.font-weight-bold Section 
           span= (ind + 1)
         div.row
-          div.col-md-4.legSection(id="legSection" + ind contenteditable="true") !{val.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br/>')}
+          div.col-md-4.legSection(id="legSection" + ind contenteditable="true") !{val}
           div.col-md-4.plainSection(id="plainSection" + ind contenteditable="true")= plainLangArr[ind]
-          div.col-md-4.fisc10Section(id="fisc10Section" + ind contenteditable="true")= fisc10Arr[ind]
+          div.col-md-4.fisc10Section(id="fiscTenSection" + ind contenteditable="true")= fiscTenArr[ind]
         hr
 
-      
       button#nodegit(type="submit") /nodegit
       a(href="/history")
         button /history
