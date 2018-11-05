@@ -3,6 +3,7 @@
 const nodegit = document.getElementById("nodegit");
 // used for if a user adds a new section, so the id's don't repeat
 let newSectionCounter = 0;
+let undoCounter = 0;
 
 // these arrays will hold updated text of each section if user makes changes and clicks ./nodegit button
 const legTextArrUpdated = [];
@@ -27,9 +28,9 @@ nodegit.onclick = (e) => {
     let fiscTen = "";
 
     // get innerHTML of each section
-    legText = legSectionsUpdated[i].innerHTML;
-    plainLang = plainSectionsUpdated[i].innerHTML;
-    fiscTen = fiscTenSectionsUpdated[i].innerHTML;
+    legText = legSectionsUpdated[i].innerText;
+    plainLang = plainSectionsUpdated[i].innerText;
+    fiscTen = fiscTenSectionsUpdated[i].innerText;
     
     console.log(legText);
 
@@ -57,21 +58,31 @@ nodegit.onclick = (e) => {
 
 // exout a section (needs to use document.on to account for sections which are added dynamically)
 $(document).on("click", ".fa-times-circle", (e) => {
-  e.preventDefault();
-  
-  console.log("exout");
-  
+
+  // STEP 1: HIDE the element (so user can undo the "deletion"),
+  // and remove the .legSection, .plainSection, and .fiscTenSection classes (so they don't get picked up if /nodegit is clicked)
   let clickedId = e.target.id;
-  let del = $("#" + clickedId).parentsUntil(".container");
+  let sectionToHide = $("#" + clickedId).parentsUntil(".container");
+  console.log(sectionToHide);
+  let sections = $("#" + clickedId).parent().next().children();
+  // remove the .legSection, .plainSection, .fiscTenSection classes (which are used to get the innerHTML on a /nodegit update)
+  $(sections[0]).removeClass("legSection");
+  $(sections[1]).removeClass("plainSection");
+  $(sections[2]).removeClass("fiscTenSection");
+    
+  sectionToHide.hide();
+  // sections.hide();
   
-  del.hide();
+  // if it's a new section that's then immediately deleted, it doesn't need to have an undo option
+  if (!sections[0].innerText.match(/^Add legislative text here/)) {
+    sectionToHide.after('<button class="undo" id="undo' + undoCounter + '" style="display: block;">Undo deletion</button>');
+    undoCounter++;
+  }
 });
 
 // add a new section after clicked section (need to use document.on for sections which are added dynamically)
 $(document).on("click", ".fa-feather-alt", (e) => {
   e.preventDefault();
-  let clickedId = e.target.id;
-  let sectionNum = clickedId.replace(/addnew/, "");
   let secondParent = e.currentTarget.parentNode.parentNode.id;
   
   $("#" + secondParent).after('<div id="newSection' + newSectionCounter
@@ -84,6 +95,23 @@ $(document).on("click", ".fa-feather-alt", (e) => {
     + '" contenteditable="true">Add fiscal impact here</div></div><hr/></div>');
 
   newSectionCounter++;
+});
+
+// undo a section deletion
+$(document).on("click", ".undo", (e) => {
+  // STEP 2: ADD classes back and show section again in if undo is clicked
+  let clickedId = e.target.id;
+  
+  let prev = $("#" + clickedId).parentsUntil(".container");  
+  let prevchildren = prev.children();
+
+  prev.show();
+  prevchildren.show();
+
+  // I don't know why, but this needs to be called TWICE to remove the actual undo button ?????
+  $("#" + clickedId).remove();
+  $("#" + clickedId).remove();
+
 });
 
 
