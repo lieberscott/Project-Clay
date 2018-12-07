@@ -18,7 +18,10 @@ html(lang="en")
     div.container
       h1 An Act relative to Health Care Quality, Cost Control, and Transparency
       p You can click inside the boxes to edit the text. Clicking "/nodegit" will permanently save the changes for all users (same funcationality as on Wikipedia)
-      
+      != messages('messages', local)
+      if errors
+        for error, i in errors
+          div(class="alert alert-danger") #{error.msg}
       div.row
         div.col-md-4.font-weight-bold Legislative text
         div.col-md-4.font-weight-bold Plain text explanation
