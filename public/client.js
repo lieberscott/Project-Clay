@@ -40,17 +40,28 @@ nodegit.onclick = (e) => {
     fiscTenArrUpdated.push(fiscTen);
 
   }
+  
+  let token = JSON.parse(localStorage.getItem("token"));
+  
   // send data to backend
-  // $.ajax({
-  //   url: "/nodegit",
-  //   type: "get",
-  //   data: { legTextArrUpdated, plainLangArrUpdated, fiscTenArrUpdated },
-  //   success: (res) => {
-  //     if (res.result == "nodegit") {
-  //       window.location.replace("/history");
-  //     }
-  //   }
-  // });
+  $.ajax({
+    url: "/nodegit",
+    type: "get",
+    data: { legTextArrUpdated, plainLangArrUpdated, fiscTenArrUpdated },
+    success: (res) => {
+      if (res.result == "nodegit") {
+        window.location.replace("/history");
+      }
+      else if (res.result == "nologin") {
+        alert("You must be logged in to make changes");
+      }
+    },
+    error: (res) => {
+      if (res.result == "error") {
+        alert("An error occurred. That's all we know right now. Try again shortly.");
+      }
+    }
+  });
 
   console.log("update clicked");
 };
@@ -107,7 +118,14 @@ $(document).on("click", ".undo", (e) => {
 
   prev.show();
   prevchildren.show();
-
+  
+  let children = prevchildren.children();
+  
+  // add classes back in
+  $(children[3]).addClass("legSection");
+  $(children[4]).addClass("plainSection");
+  $(children[5]).addClass("fiscTenSection");
+  
   // I don't know why, but this needs to be called TWICE to remove the actual undo button ?????
   $("#" + clickedId).remove();
   $("#" + clickedId).remove();
